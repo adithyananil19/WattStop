@@ -224,5 +224,5 @@ MIT — free to use, modify, and distribute.
 ---
 
 <div align="center">
-  Built with ⚡ by <a href="https://github.com/adithyananil19">Adithya Anil</a>
+  Built with ⚡ by <a href="https://github.com/adithyananil19">P A Adithyan</a>
 </div>

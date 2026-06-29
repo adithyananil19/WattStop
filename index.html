@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="WattStop — Smart EV journey planner with real-time charging station maps, vehicle profile filtering, and the Smart Waiting dashboard.">
+  <meta name="theme-color" content="#0d1117">
+
+  <title>WattStop — EV Journey Planner</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- WattStop Styles -->
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ══════════════════════════════════════════
+       NAVIGATION BAR
+  ══════════════════════════════════════════ -->
+  <nav id="nav" class="nav">
+
+    <!-- Brand -->
+    <div class="nav-brand">
+      <div class="nav-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M13 2L4 14h7l-1 8 9-12h-7l2-8z"/>
+        </svg>
+      </div>
+      <span class="nav-brand-name">WattStop</span>
+    </div>
+
+    <!-- Links -->
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="#map" class="nav-link active" data-view="map" id="nav-map" aria-label="Map view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+          <line x1="8" y1="2" x2="8" y2="18"/>
+          <line x1="16" y1="6" x2="16" y2="22"/>
+        </svg>
+        Map
+      </a>
+      <a href="#planner" class="nav-link" data-view="planner" id="nav-planner" aria-label="Journey Planner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M3 12h3l3-9 4 18 3-9h5"/>
+        </svg>
+        Planner
+      </a>
+      <a href="#profile" class="nav-link" data-view="profile" id="nav-profile" aria-label="Profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        Profile
+      </a>
+    </nav>
+
+    <!-- Auth section -->
+    <div class="nav-auth">
+      <div id="nav-logged-out" class="nav-auth-group">
+        <a href="#login" class="btn btn-ghost btn-sm" id="btn-nav-login">Log In</a>
+        <a href="#login" class="btn btn-primary btn-sm" id="btn-nav-signup"
+           onclick="setTimeout(()=>{document.getElementById('tab-register')?.click()},50)">
+          Sign Up
+        </a>
+      </div>
+      <div id="nav-logged-in" class="nav-auth-group hidden">
+        <span id="nav-user-name" class="nav-user-name"></span>
+        <button id="nav-logout" class="btn btn-ghost btn-sm">Log Out</button>
+      </div>
+    </div>
+
+  </nav>
+
+  <!-- ══════════════════════════════════════════
+       VIEW: LOGIN / REGISTER
+  ══════════════════════════════════════════ -->
+  <div id="view-login" class="view" role="main" aria-label="Login">
+    <div class="auth-container">
+      <div class="auth-card glass">
+
+        <div class="auth-logo">
+          <div class="auth-logo-icon" aria-hidden="true">⚡</div>
+          <h1 class="auth-title">WattStop</h1>
+          <p class="auth-subtitle">Your smart EV journey companion</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="auth-tabs" role="tablist" aria-label="Auth mode">
+          <button class="auth-tab active" id="tab-login" role="tab" aria-selected="true">Log In</button>
+          <button class="auth-tab" id="tab-register" role="tab" aria-selected="false">Sign Up</button>
+        </div>
+
+        <!-- ── Login Form ── -->
+        <form id="form-login" class="auth-form" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="login-email">Email</label>
+            <input type="email" id="login-email" class="form-input"
+                   placeholder="you@example.com" autocomplete="email" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="login-password">Password</label>
+            <input type="password" id="login-password" class="form-input"
+                   placeholder="••••••••" autocomplete="current-password" required>
+          </div>
+          <div id="login-error" class="form-error hidden" role="alert"></div>
+          <button type="submit" id="btn-login-submit" class="btn btn-primary btn-full">
+            Log In to WattStop
+          </button>
+        </form>
+
+        <!-- ── Register Form ── -->
+        <form id="form-register" class="auth-form hidden" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="reg-name">Full Name</label>
+              <input type="text" id="reg-name" class="form-input"
+                     placeholder="Arjun Mehta" autocomplete="name" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-email">Email</label>
+              <input type="email" id="reg-email" class="form-input"
+                     placeholder="you@example.com" autocomplete="email" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="reg-password">Password</label>
+              <input type="password" id="reg-password" class="form-input"
+                     placeholder="Min. 6 characters" autocomplete="new-password" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-vehicle">Vehicle Name</label>
+              <input type="text" id="reg-vehicle" class="form-input"
+                     placeholder="Tata Nexon EV" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reg-battery">Battery Capacity (kWh)</label>
+            <input type="number" id="reg-battery" class="form-input"
+                   placeholder="e.g. 40" min="5" max="250" step="0.1" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Supported Port Types</label>
+            <div class="port-selector" role="group" aria-label="Port types">
+              <label class="port-option">
+                <input type="checkbox" name="port" value="Type 2" id="reg-port-type2">
+                <span>Type 2</span>
+              </label>
+              <label class="port-option">
+                <input type="checkbox" name="port" value="CCS2" id="reg-port-ccs2">
+                <span>CCS2</span>
+              </label>
+              <label class="port-option">
+                <input type="checkbox" name="port" value="CHAdeMO" id="reg-port-chademo">
+                <span>CHAdeMO</span>
+              </label>
+              <label class="port-option">
+                <input type="checkbox" name="port" value="CCS1" id="reg-port-ccs1">
+                <span>CCS1</span>
+              </label>
+              <label class="port-option">
+                <input type="checkbox" name="port" value="Tesla" id="reg-port-tesla">
+                <span>Tesla</span>
+              </label>
+              <label class="port-option">
+                <input type="checkbox" name="port" value="GB/T" id="reg-port-gbt">
+                <span>GB/T</span>
+              </label>
+            </div>
+          </div>
+          <div id="register-error" class="form-error hidden" role="alert"></div>
+          <button type="submit" id="btn-register-submit" class="btn btn-primary btn-full">
+            Create My Account ⚡
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       VIEW: SMART MAP
+  ══════════════════════════════════════════ -->
+  <div id="view-map" class="view active" role="main" aria-label="Charging Station Map">
+
+    <div class="map-layout">
+
+      <!-- Top status bar -->
+      <div class="map-topbar glass" role="status" aria-live="polite">
+        <div class="map-status">
+          <div class="status-dot" id="location-dot" aria-hidden="true"></div>
+          <span id="location-label">Locating you…</span>
+        </div>
+        <div id="map-filter-badge" class="filter-badge hidden" aria-label="Active vehicle filter">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               width="13" height="13" aria-hidden="true">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          <span id="filter-badge-text"></span>
+        </div>
+        <div class="station-count" aria-live="polite">
+          <span id="station-count-text">—</span> stations
+        </div>
+      </div>
+
+      <!-- Leaflet Map -->
+      <div id="map" aria-label="Interactive charging station map"></div>
+
+      <!-- Search this area floating button -->
+      <button id="search-area-btn" class="search-area-btn hidden" aria-label="Search charging stations in this area">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Search this area
+      </button>
+
+      <!-- Station info panel (slide-in from right) -->
+      <aside id="station-panel" class="station-panel glass hidden" aria-label="Station details">
+        <button class="panel-close" id="panel-close" aria-label="Close panel">✕</button>
+        <div id="station-panel-content"></div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       VIEW: JOURNEY PLANNER
+  ══════════════════════════════════════════ -->
+  <div id="view-planner" class="view" role="main" aria-label="Journey Planner">
+
+    <div class="planner-layout">
+
+      <!-- Sidebar: form + results -->
+      <div class="planner-sidebar">
+
+        <div class="planner-header">
+          <h2 class="view-title">Journey Planner</h2>
+          <p class="view-subtitle">Map your EV road trip with smart charging stops</p>
+        </div>
+
+        <form id="form-planner" class="planner-form glass" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="plan-start">
+              <span class="label-dot label-dot--start" aria-hidden="true"></span>
+              Starting Point
+            </label>
+            <input type="text" id="plan-start" class="form-input"
+                   placeholder="e.g. Bangalore, Karnataka" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="plan-dest">
+              <span class="label-dot label-dot--end" aria-hidden="true"></span>
+              Destination
+            </label>
+            <input type="text" id="plan-dest" class="form-input"
+                   placeholder="e.g. Munnar, Kerala" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="plan-battery">
+              Current Battery — <span id="battery-display">80%</span>
+            </label>
+            <div class="battery-input-wrap">
+              <input type="range" id="plan-battery" class="battery-slider"
+                     min="5" max="100" value="80" aria-valuenow="80"
+                     aria-valuemin="5" aria-valuemax="100">
+            </div>
+          </div>
+          <div id="planner-error" class="form-error hidden" role="alert"></div>
+
+          <!-- Round trip toggle -->
+          <label class="roundtrip-toggle" for="plan-roundtrip">
+            <input type="checkbox" id="plan-roundtrip">
+            <span class="roundtrip-track">
+              <span class="roundtrip-thumb"></span>
+            </span>
+            <span class="roundtrip-label">🔄 Return to starting point</span>
+          </label>
+
+          <button type="submit" class="btn btn-primary btn-full" id="plan-btn">
+            <span>Plan Journey</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" width="15" height="15" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </button>
+        </form>
+
+        <!-- Journey result timeline -->
+        <div id="journey-result" class="journey-result hidden" aria-live="polite"></div>
+
+      </div>
+
+      <!-- Map pane -->
+      <div class="planner-map-container" aria-label="Route map">
+        <div id="planner-map"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       VIEW: SMART WAITING DASHBOARD
+  ══════════════════════════════════════════ -->
+  <div id="view-waiting" class="view" role="main" aria-label="Smart Waiting Dashboard">
+
+    <div class="waiting-layout">
+
+      <div class="waiting-header">
+        <a href="#planner" class="btn btn-ghost btn-sm back-btn" id="btn-back-planner">
+          ← Back to Journey
+        </a>
+        <h2 class="view-title">Smart Waiting</h2>
+        <p class="view-subtitle" id="waiting-station-name">Charging in progress…</p>
+      </div>
+
+      <div class="waiting-grid">
+
+        <!-- Countdown timer card -->
+        <div class="waiting-timer-card glass" role="timer" aria-label="Charge countdown">
+          <div class="timer-label">Time Remaining</div>
+
+          <div class="timer-display" aria-live="polite" aria-atomic="true">
+            <span id="timer-minutes" aria-label="minutes">25</span>
+            <span class="timer-colon" aria-hidden="true">:</span>
+            <span id="timer-seconds" aria-label="seconds">00</span>
+          </div>
+
+          <div class="charge-progress-wrap">
+            <div class="charge-progress-bar" role="progressbar"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="charge-progress-fill" id="charge-fill"></div>
+            </div>
+            <div class="charge-progress-labels">
+              <span id="arrival-soc">Arrival: 20%</span>
+              <span id="departure-soc">Target: 80%</span>
+            </div>
+          </div>
+
+          <div class="charging-animation" aria-hidden="true">
+            <div class="bolt-pulse">⚡</div>
+            <span class="charging-text">Charging in progress</span>
+          </div>
+        </div>
+
+        <!-- Activity recommendations -->
+        <div class="waiting-activities">
+          <h3 class="activities-title">Make the most of your time</h3>
+          <p class="view-subtitle" style="margin-bottom:var(--sp-4)">
+            Tailored picks based on your charge window
+          </p>
+          <div id="activities-container" class="activities-grid" aria-label="Activity suggestions"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       VIEW: PROFILE
+  ══════════════════════════════════════════ -->
+  <div id="view-profile" class="view" role="main" aria-label="Vehicle Profile">
+
+    <div class="profile-layout">
+
+      <div class="profile-header">
+        <h2 class="view-title">Vehicle Profile</h2>
+        <p class="view-subtitle">
+          Your saved profile drives the smart station filter on the map
+        </p>
+      </div>
+
+      <div class="profile-card glass">
+
+        <div class="profile-avatar">
+          <div class="avatar-icon" aria-hidden="true">🚗</div>
+          <div class="profile-meta">
+            <h3 id="profile-name">—</h3>
+            <p id="profile-email">—</p>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <form id="form-profile" novalidate>
+          <div class="profile-section-title">Vehicle Details</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="prof-vehicle">Vehicle Name</label>
+              <input type="text" id="prof-vehicle" class="form-input"
+                     placeholder="Tata Nexon EV" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="prof-battery">Battery Capacity (kWh)</label>
+              <input type="number" id="prof-battery" class="form-input"
+                     min="5" max="250" step="0.1" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Supported Port Types</label>
+            <div class="port-selector" role="group" aria-label="Port types">
+              <label class="port-option">
+                <input type="checkbox" name="prof-port" value="Type 2" id="prof-port-type2">
+                <span>Type 2</span>
+              </label>
+              <label class="port-option">
+                <input type="checkbox" name="prof-port" value="CCS2" id="prof-port-ccs2">
+                <span>CCS2</span>
+              </label>
+              <label class="port-option">
+                <input type="checkbox" name="prof-port" value="CHAdeMO" id="prof-port-chademo">
+                <span>CHAdeMO</span>
+              </label>
+              <label class="port-option">
+                <input type="checkbox" name="prof-port" value="CCS1" id="prof-port-ccs1">
+                <span>CCS1</span>
+              </label>
+              <label class="port-option">
+                <input type="checkbox" name="prof-port" value="Tesla" id="prof-port-tesla">
+                <span>Tesla</span>
+              </label>
+              <label class="port-option">
+                <input type="checkbox" name="prof-port" value="GB/T" id="prof-port-gbt">
+                <span>GB/T</span>
+              </label>
+            </div>
+          </div>
+          <div id="profile-error"   class="form-error hidden"   role="alert"></div>
+          <div id="profile-success" class="form-success hidden" role="status"></div>
+          <button type="submit" id="btn-save-profile" class="btn btn-primary">
+            Save Changes
+          </button>
+        </form>
+
+        <hr class="divider">
+
+        <div class="danger-zone">
+          <div class="danger-title">Session</div>
+          <button id="profile-logout" class="btn btn-danger">
+            Log Out
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- Toast container (dynamically populated by app.js) -->
+<div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- ── Scripts ── -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/map.js"></script>
+<script src="js/planner.js"></script>
+<script src="js/waiting.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
